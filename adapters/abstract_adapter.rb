@@ -3,6 +3,11 @@
 module TokyoModel
   module Adapters
     class AbstractAdapter
+      attr_accessor :plug
+      def initialize(klass)
+        @plug = klass
+      end
+      
       def adapter_name
         "Abstract"
       end

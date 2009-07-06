@@ -42,7 +42,7 @@ module TokyoModel
         end
         send(:include, TokyoModel::Core::InstanceMethods)
         
-        self.adapter = configure_adapter # configure_adapter is defined in the individual adapter files.
+        self.adapter = configure_adapter(self) # configure_adapter is defined in the individual adapter files.
       end
     
       def field_filter(*fields)
