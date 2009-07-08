@@ -33,6 +33,17 @@ describe "Core Extensions" do
     end
   end
   
+  describe "Hash" do
+    describe "key manipulation" do
+      it "should support symbolizing keys" do
+        { "jones" => "soda", "is" => "weird" }.symbolize_keys.keys.should include(:is, :jones)
+      end
+      it "should support stringifying keys" do
+        { :jones => "soda", :is => "weird" }.stringify_keys.keys.sort.should == ["is", "jones"]
+      end
+    end
+  end
+  
   describe "Module" do
     it "should provide a .delegate class method" do
       Widget.should respond_to(:delegate)
