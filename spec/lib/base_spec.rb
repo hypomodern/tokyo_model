@@ -8,7 +8,7 @@ describe TokyoModel::Base do
   describe "tokyo_store" do
     it "should provide some sane defaults" do
       Modell.tokyo_model_options.should include(
-        :type => :db,
+        :use => :db,
         :adapter => :ruby_tokyotyrant,
         :filter_fields => nil
       )
@@ -50,6 +50,17 @@ describe TokyoModel::Base do
     end
   end
   
+  describe "setup" do
+    it "should return an instance with the appropriate instance variables set" do
+      das = Modell.setup(1235, { "qbert" => "true", "camping" => "no, thanks", "zzix" => "xizz" })
+      das.should be_a_kind_of(Modell)
+      das.should_not be_a_new_record
+      das.primary_key.should == 1235
+      das.qbert.should == "true"
+      das.record.should include({:qbert=>"true", :camping=>"no, thanks", :zzix=>"xizz"})
+    end
+  end
+  
   describe "InstanceMethods" do
     before(:each) do
       Modell.field_filter(:zagreb)
@@ -68,6 +79,22 @@ describe TokyoModel::Base do
       end
     end
     
+    describe "save" do
+      it "should save the record via the adapter" do
+        @model.id = 1235
+        Modell.adapter.should_receive(:save).with(1235, {}, [])
+        
+        @model.save
+      end
+    end
+    
+    describe "set_index" do
+      it "should set an index via the adapter" do
+        Modell.adapter.should_receive(:set_index).with("message_id", :lexical)
+        Modell.set_index("message_id", :lexical)
+      end
+    end
+    
     describe "record" do
       it "should contain a hash representing the current object" do
         @model.record.should == {}
@@ -82,6 +109,17 @@ describe TokyoModel::Base do
       end
       it "can be accessed via method_missing hackery (returning nil if not found)" do
         @model.zagreb.should be_nil
+      end
+    end
+    
+    describe "method_missing" do
+      it "should check for the method_id amongst the valid fields" do
+        Robot.field_filter(:zagreb)
+        lambda { Robot.new.zagreb }.should_not raise_error
+      end
+      
+      it "should re-raise NoMethodError if the method_id isn't found amongst the fields" do
+        lambda { Robot.new.totally_going_to_fail }.should raise_error(NoMethodError)
       end
     end
   end

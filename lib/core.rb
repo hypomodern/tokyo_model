@@ -9,21 +9,21 @@ module TokyoModel
     
     module ClassMethods
       def tokyo_store(options = {})
-        # avoid multiple inclusion
-        return if self.included_modules.include?(TokyoModel::Core::InstanceMethods)
-      
         # some friendly default options
         defaults = {
           :adapter => :ruby_tokyotyrant,
           :pool => [],
           :filter_fields => nil,
-          :type => :db
+          :use => :db
         }
       
         tmo = defaults.merge(options)
         # set class-level reader for the options
         class_inheritable_reader :tokyo_model_options
         write_inheritable_attribute :tokyo_model_options, tmo
+        
+        class_inheritable_reader :server_pool
+        write_inheritable_attribute :server_pool, TokyoModel::PoolBoy.new(tmo[:pool])
       
         # autorequire the necessary tokyo library
         tokyo_adapter = TokyoModel::Base::ADAPTERS[tmo[:adapter]]
@@ -37,10 +37,14 @@ module TokyoModel
         # get the basic functionality into the model class
         class_eval do
           extend TokyoModel::Core::ModelMethods
-          attr_accessor :record
           cattr_accessor :adapter
+          attr_accessor :record
+          attr_accessor :primary_key
+          attr_accessor :__servers
+          
+          alias_method :id, :primary_key
+          alias_method :id=, :primary_key=
         end
-        send(:include, TokyoModel::Core::InstanceMethods)
         
         self.adapter = configure_adapter(self) # configure_adapter is defined in the individual adapter files.
       end
@@ -55,27 +59,7 @@ module TokyoModel
     end
     
     module ModelMethods
-      delegate :query, :set_index, :connect, :to => :adapter, :allow_nil => true
-    end
-  
-    module InstanceMethods
-      delegate :increment, :decrement, :save, :to => :@@adapter, :allow_nil => true
-      
-      def method_missing(method, *args, &block)
-        begin
-          super(method, *args, &block)
-        rescue NoMethodError => e
-          field_name = method.to_s.sub(/\=$/, '')
-          if valid_field?(field_name)
-            if method.to_s =~ /\=$/
-              return write_field(field_name.to_sym, args[0])
-            else
-              return read_field(method)
-            end
-          end
-          raise e
-        end
-      end
+      delegate :query, :connect, :to => :adapter, :allow_nil => true
     end
   end
 end
