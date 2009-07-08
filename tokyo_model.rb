@@ -13,6 +13,8 @@ Dir.glob(File.join(lib_path, "core_ext", "*.rb")).each do |core_ext|
 end
 require 'base'
 require 'core'
+require 'pool_boy'
+require 'query_result'
 
 module TokyoModel
   class InvalidAdapter < StandardError
@@ -21,4 +23,7 @@ module TokyoModel
       super(temp_msg)
     end
   end
+  class NotImplementedYet < StandardError; end
+  class NoPrimaryKey < StandardError; end
+  class ServerNotInPool < StandardError; end
 end
