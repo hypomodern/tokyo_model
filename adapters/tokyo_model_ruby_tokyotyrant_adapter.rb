@@ -25,6 +25,7 @@ module TokyoModel
         pk_only = options.delete(:pk_only)
         order_by = options.delete(:order)
         limit = options.delete(:limit)
+        limit = [limit] unless limit.is_a?(Array) || limit.nil?
         raw = options.delete(:raw)
         
         results = connect(:servers => options[:servers]) do |tyrant|
@@ -34,7 +35,7 @@ module TokyoModel
               conditions.each do |condition|
                 q.condition(*parse_condition(condition))
               end
-              q.limit(limit) if limit
+              q.limit(*limit) if limit
               q.order_by(*parse_ordering(order_by)) if order_by
             end
             
