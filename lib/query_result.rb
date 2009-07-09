@@ -9,7 +9,8 @@ module TokyoModel
   # result.count
   # result.objects # => a list of +TokyoModel+s
   # result.raw # => the raw hash of results
-  # result.keys_and_servers # => reformat the results into { "1235" => ["server_1", "server_2"] } format
+  # result.keys_by_server # => reformat the results into { "1235" => ["server_1", "server_2"] } format
+  # result.count # => how many unique records were found (across all servers)
   class QueryResult
     attr_accessor :object_class
     def initialize(results, klass)
@@ -18,16 +19,53 @@ module TokyoModel
     end
     
     def raw
-      return @raw if @raw
-      parse_results
+      @raw ||= parse_results
+    end
+    
+    def errors
+      @errors ||= raw.inject({}) do |accum, (server, result)|
+        accum[server] = result if result.is_a?(StandardError)
+        accum
+      end
+    end
+    
+    def errors?
+      !errors.empty?
+    end
+    
+    def servers_by_key
+      @servers_by_key ||= raw.inject({}) do |accum, (server, result)|
+        if result.is_a?(Hash)
+          pks = result.keys
+          pks.each do |pk|
+            accum[pk] ||= []
+            accum[pk] = accum[pk] | [server]
+          end
+        end
+        accum
+      end
+    end
+    
+    def objects
+      @objects ||= servers_by_key.inject([]) do |accum, (pk, server_list)|
+        record = raw[server_list.first][pk]
+        if record
+          accum << object_class.setup(pk, record, server_list)
+        end
+        accum
+      end
+    end
+    
+    def count
+      servers_by_key.keys.length
     end
     
     private
     def parse_results
-      @raw = @__raw_results.inject({}) do |raw, (server, results)|
+      @__raw_results.inject({}) do |raw, (server, results)|
         if results.is_a?(Hash)
           raw.merge(server => results)
-        else
+        elsif results.is_a?(Array)
           pk_looks_like = object_class.adapter.primary_key
           formatted = results.inject({}) do |new_results, hsh|
             pk = hsh.delete(pk_looks_like)
@@ -35,6 +73,8 @@ module TokyoModel
             new_results
           end
           raw.merge(server => formatted)
+        else
+          raw.merge(server => results)
         end
       end
     end
