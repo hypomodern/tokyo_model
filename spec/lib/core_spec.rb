@@ -39,7 +39,7 @@ describe TokyoModel::Core do
   
   describe "ModelMethods" do
     it "should delegate core class methods to the adapter" do
-      [:query, :connect].each do |meth|
+      [:query, :serial_querier, :connect].each do |meth|
         Modell.should respond_to(meth)
         Modell.adapter.should_receive(meth)
         Modell.send(meth)

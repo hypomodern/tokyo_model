@@ -42,6 +42,19 @@ describe "Core Extensions" do
         { :jones => "soda", :is => "weird" }.stringify_keys.keys.sort.should == ["is", "jones"]
       end
     end
+    
+    describe "deep_merging" do
+      it "should deeply merge hashes" do
+        hsh3 = { "server3" => { "1235" => { "column" => "value" } } }
+        hsh4 = { "server3" => { "999" => { "column" => "value" } } }
+        hsh3.deep_merge(hsh4).should == {"server3"=>{"999"=>{"column"=>"value"}, "1235"=>{"column"=>"value"}}}
+      end
+      it "should union array values in the hashes" do
+        hsh = { "server" => [1,4,5] }
+        hsh2 = { "server" => [4, 7, 11], "server2" => [3, 4] }
+        hsh.deep_merge(hsh2).should == {"server"=>[1, 4, 5, 7, 11], "server2"=>[3, 4]}
+      end
+    end
   end
   
   describe "Module" do

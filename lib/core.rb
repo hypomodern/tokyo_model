@@ -59,7 +59,7 @@ module TokyoModel
     end
     
     module ModelMethods
-      delegate :query, :connect, :to => :adapter, :allow_nil => true
+      delegate :query, :serial_querier, :connect, :to => :adapter, :allow_nil => true
     end
   end
 end

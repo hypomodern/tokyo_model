@@ -22,30 +22,44 @@ module TokyoModel
       @primary_key = nil
     end
     
-    def self.setup(pk, record)
+    def self.setup(pk, record, servers = [])
       new_model = allocate
       new_model.instance_variable_set(:@record, record.symbolize_keys)
       new_model.instance_variable_set(:@primary_key, pk)
+      new_model.instance_variable_set(:@__servers, servers)
       new_model
     end
     
+    # == #find
+    # 
+    # find returns a TokyoModel::QueryResult proxy, which is pretty easy to work with.
+    #
     # find options
     # * +:servers+: a list of servers to narrow the search to.
-    # * +:raw+: a boolean indicating whether or not to return the raw result hash or a TokyoModel object. Default = +false+
+    # * +:pk_only+: a boolean indicating whether or not to return the raw result hash or a TokyoModel object. Default = +false+
+    # * +:order+: which column to order results on
+    # * +:limit+: how many results to return. Pass an array of [limit, offset] if you want an offset
     #
     # Examples
     # Modell.find("1235") # => check all servers in pool for that primary_key
     # Modell.find("1235", { :servers => ["archive_1"] } ) # => check 'archive_1'
     # Modell.find({ :policy_id => '1243' }) # => collect all results from all servers
-    # Modell.find({ :policy_id => '1243' }, { :raw => true }) # => collect all results from all servers, leave response as a hash
+    # Modell.find({ :policy_id => '1243' }, { :pk_only => true }) # => collect all pks from all servers
     # Modell.find({ :policy_id => '1254' }, { :servers => ['archive_2'] }) # check only 'archive_2'
     #
-    # Disjoint (or) Queries! n.b. array definitely needed, since +#extract_options!+ is trained to look for hashes
+    # Disjoint (or) Queries! n.b. array definitely needed, since +Array#extract_options!+ is trained to look for hashes
     # Modell.find([{ :policy_id => '1243' }, { :policy_id => '1337' }])
     def self.find(*ids_or_search)
-      options = ids_or_search.extract_options!
+      options = ids_or_search.extract_options! if ids_or_search.size > 1
+      options ||= {}
       queries = ids_or_search.flatten
-      query(queries, options)
+      
+      # check for serial-queries
+      if queries.first.is_a?(Hash)
+        serial_querier(queries, options)
+      else
+        query(queries, options)
+      end
     end
     
     def self.set_index(column, type)
@@ -68,12 +82,23 @@ module TokyoModel
       if self.id.nil?
         raise TokyoModel::NoPrimaryKey
       end
-      
-      self.class.adapter.save(self.id, self.record, servers)
-      @new_record = false
-      self.id
+      new_record? ? create(servers) : update(servers)
     end
-  
+    
+    def create(servers = [])
+      self.class.adapter.save(self.id, self.record, servers)
+      @__servers = servers.empty? ? self.class.find(self.id).raw.keys : servers
+      @new_record = false
+      self
+    end
+    
+    def update(servers = [])
+      # combine any *new* servers we want to save to with the previous list of servers
+      server_list = servers | @__servers
+      self.class.adapter.save(self.id, self.record, server_list)
+      self
+    end
+    
     def valid_field?(field_name)
       fields = self.class.tokyo_model_options[:filter_fields]
       if fields.nil? || fields.include?(field_name.to_sym)

@@ -45,8 +45,8 @@ describe TokyoModel::Base do
   
   describe "pool" do
     it "should allow you to customize your server pool" do
-      Modell.pool("/tmp/tt_sock", "/var/tokyo/archive/1")
-      Modell.tokyo_model_options.should include(:pool => ["/tmp/tt_sock", "/var/tokyo/archive/1"])
+      Modell.pool("/tmp/tokyo_model_table.tct_sock", "/var/tokyo/archive/1")
+      Modell.tokyo_model_options.should include(:pool => ["/tmp/tokyo_model_table.tct_sock", "/var/tokyo/archive/1"])
     end
   end
   
@@ -80,11 +80,43 @@ describe TokyoModel::Base do
     end
     
     describe "save" do
+      before(:each) do
+        Modell.stub!(:find).and_return(TokyoModel::QueryResult.new({"server_q" => {}}, Modell))
+      end
       it "should save the record via the adapter" do
         @model.id = 1235
         Modell.adapter.should_receive(:save).with(1235, {}, [])
         
         @model.save
+      end
+      it "should should accept a list of servers to save to" do
+        @model.id = 1235
+        Modell.adapter.should_receive(:save).with(1235, {}, ["server_1"])
+        
+        @model.save("server_1")
+      end
+      it "should set the record's internal server list" do
+        @model.id = 1235
+        Modell.adapter.should_receive(:save).with(1235, {}, ["server_1"])
+        
+        @model.save("server_1")
+        @model.instance_variable_get(:@__servers).should == ["server_1"]
+      end
+      it "should set the record's server list by requery if needed" do
+        @model.id = 1235
+        Modell.adapter.should_receive(:save).with(1235, {}, [])
+        Modell.should_receive(:find).with(1235).and_return(TokyoModel::QueryResult.new({"server_1" => {}}, Modell))
+        
+        @model.save
+        @model.instance_variable_get(:@__servers).should == ["server_1"]
+      end
+      it "should combine the given servers with the model's existing list (if any)" do
+        @model.id = 1235
+        @model.instance_variable_set(:@__servers, ["server_3"])
+        @model.stub!(:new_record?).and_return(false)
+        Modell.adapter.should_receive(:save).with(1235, {}, ["server_1", "server_3"])
+        
+        @model.save("server_1")
       end
     end
     
