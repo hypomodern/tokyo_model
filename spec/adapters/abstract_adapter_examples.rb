@@ -71,14 +71,15 @@ shared_examples_for("an adapter that implements AbstractAdapter") do
         [mock(Object, :host => "archive_1", :port => 0), mock(Object, :host => "archive_2", :port => 0)])
       $tyrant_class.should_receive(:new).with("archive_1", 0).and_return(fake_tyrant_1)
       $tyrant_class.should_receive(:new).with("archive_2", 0).and_return(fake_tyrant_2)
-      fake_tyrant_1.should_receive(:some_library_method)
+      fake_tyrant_1.should_receive(:some_library_method).and_return("34")
       fake_tyrant_1.should_receive(:close)
-      fake_tyrant_2.should_receive(:some_library_method)
+      fake_tyrant_2.should_receive(:some_library_method).and_return("67")
       fake_tyrant_2.should_receive(:close)
       
-      @adapter.connect({ :servers => ["archive_1", "archive_2"] }) do |tyr|
+      results = @adapter.connect({ :servers => ["archive_1", "archive_2"] }) do |tyr|
         tyr.some_library_method
       end
+      results.should == { "archive_1" => "34", "archive_2" => "67" }
     end
   end
 end

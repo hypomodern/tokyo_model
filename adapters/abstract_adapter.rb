@@ -21,9 +21,6 @@ module TokyoModel
           :pk_only => false,
           :limit => nil,
           :order => nil,
-          :raw => false,
-          :fanout => false,
-          :aggregate => false,
           :servers => :all
         }
       end
@@ -72,16 +69,16 @@ module TokyoModel
         else
           servers = pool_boy.acquire_servers(options[:servers])
           
-          threads = []
+          threads = {}
           servers.each do |server|
-            threads << Thread.new do
+            threads["#{server.host}#{server.port == 0 ? '' : ":" + server.port}"] = Thread.new do
               tyrant = tyrant_class.new(server.host, server.port)
               thread_result = blk.call(tyrant)
               tyrant.close
-              { server => thread_result }
+              thread_result
             end
           end
-          threads.inject({}) do |all_results, t|
+          threads.inject({}) do |all_results, (server, t)|
             t.join
             thread_response = nil
             begin
@@ -89,7 +86,7 @@ module TokyoModel
             rescue => e
               thread_response = e
             end
-            all_results.merge(thread_response)
+            all_results.merge!(server => thread_response)
             all_results
           end
         end
