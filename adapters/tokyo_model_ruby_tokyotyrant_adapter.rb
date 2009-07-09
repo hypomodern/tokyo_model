@@ -22,39 +22,42 @@ module TokyoModel
       
       def query(conditions, options)
         options = default_options.merge(options)
-        fanout = options.delete(:fanout)
-        aggregate = options.delete(:aggregate)
-        raw = options.delete(:raw)
         pk_only = options.delete(:pk_only)
         order_by = options.delete(:order)
+        limit = options.delete(:limit)
+        raw = options.delete(:raw)
         
-        results = nil
-        connect(:servers => options[:servers]) do |tyrant|
+        results = connect(:servers => options[:servers]) do |tyrant|
           if conditions.is_a?(Hash)
             # a complex query, then
             query = tyrant.prepare_query do |q|
               conditions.each do |condition|
                 q.condition(*parse_condition(condition))
               end
-              q.limit(options[:limit]) if options[:limit]
+              q.limit(limit) if limit
               q.order_by(*parse_ordering(order_by)) if order_by
             end
             
             results = pk_only ? query.search : query.get
-            results = package(results) unless raw
-          elsif conditions.is_a?(Array)
-            # looking for a set of responses
-            results = tyrant.mget(conditions)
-            results = package(results) unless raw
           else
-            # looking just for a PK, then
-            results = tyrant[conditions]
-            results[:__id] = conditions if results
-            results = package(results) unless raw
+            # looking for one or more primary keys.
+            results = tyrant.mget(conditions)
           end
         end
-        results || nil
+        raw ? results : TokyoModel::QueryResult.new(results, plug)
       end # /query
+      
+      def serial_querier(conditions, options)
+        original_options = options.dup
+        options[:raw] = true
+        
+        result_buffer = {}
+        conditions.each do |q|
+          result_buffer.deep_merge!(query(q, options))
+        end
+        
+        original_options[:raw] ? result_buffer : TokyoModel::QueryResult.new(result_buffer, plug)
+      end
       
       def increment(column, value)
         current_value = nil

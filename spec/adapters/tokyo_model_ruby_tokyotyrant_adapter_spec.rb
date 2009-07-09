@@ -33,11 +33,37 @@ describe TokyoModel::Adapters::RubyTokyoTyrantAdapter do
   describe "query" do
     it "simple pk lookup should work out alright" do
       @adapter.should_receive(:connect).and_yield(@dummy_table)
-      @dummy_table.should_receive(:[]).with("1608").and_return(@search_results.first)
+      @dummy_table.should_receive(:mget).with("1608").and_return( Modell.tokyo_model_options[:pool].first => [@search_results.first])
       
-      modell = @adapter.query("1608", {})
+      result = @adapter.query("1608", {})
+      modell = result.objects.first
       modell.qbert.should == "no"
+      modell.id.should == "1608"
+      modell.instance_variable_get(:@__servers).should == [Modell.tokyo_model_options[:pool].first]
       modell.should_not be_a_new_record
+    end
+    it "should work it out alright if you ask for a list of pks" do
+      @adapter.should_receive(:connect).and_yield(@dummy_table)
+      @dummy_table.should_receive(:mget).with(["1608", "1609", "1610"]).
+        and_return( Modell.tokyo_model_options[:pool].first => @search_results)
+        
+      result = @adapter.query(["1608", "1609", "1610"], {})
+      result.servers_by_key.should include(
+        "1608" => [Modell.tokyo_model_options[:pool].first],
+        "1609" => [Modell.tokyo_model_options[:pool].first],
+        "1610" => [Modell.tokyo_model_options[:pool].first]
+      )
+    end
+    it "should handle an actual query pretty well, too" do
+      @adapter.should_receive(:connect).and_yield(@dummy_table)
+      query = mock(Object)
+      @dummy_table.should_receive(:prepare_query).
+        and_return( query )
+      query.should_receive(:get).and_return(Modell.tokyo_model_options[:pool].first => [@search_results[1], @search_results[2]])
+        
+      result = @adapter.query({ :qbert => "yes" }, {})
+      result.count.should == 2
+      result.objects.first.qbert.should == "yes"
     end
   end
   
