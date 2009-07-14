@@ -71,7 +71,7 @@ module TokyoModel
           
           threads = {}
           servers.each do |server|
-            threads["#{server.host}#{server.port == 0 ? '' : ":" + server.port}"] = Thread.new do
+            threads["#{server.host}#{server.port == 0 ? '' : ":" + server.port.to_s}"] = Thread.new do
               tyrant = tyrant_class.new(server.host, server.port)
               thread_result = blk.call(tyrant)
               tyrant.close

@@ -46,5 +46,13 @@ describe TokyoModel::Core do
       end
     end
   end
+  
+  describe "pool" do
+    it "should inform the pool boy about changes to the pool" do
+      Modell.pool("45.45.45.45:90000")
+      Modell.tokyo_model_options[:pool].should == ["45.45.45.45:90000"]
+      Modell.server_pool.pool.should == ["45.45.45.45:90000"]
+    end
+  end
 
 end

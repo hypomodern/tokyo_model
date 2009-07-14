@@ -26,13 +26,22 @@ shared_examples_for("a concrete adapter") do
   
   describe "save" do
     it "should accept a primary key, record, and a list of servers to save to" do
-      lambda { @adapter.save(1235, {"message_id" => "234" }, ["archive_1"]) }.should_not raise_error(ArgumentError)
+      lambda { @adapter.save(1235, { "message_id" => "234" }, ["archive_1"]) }.should_not raise_error(ArgumentError)
     end
   end
   
   describe "connect" do
     it "should accept a hash of options" do
       lambda { @adapter.connect({}) {||} }.should_not raise_error(ArgumentError)
+    end
+  end
+  
+  describe "call_ext" do
+    it "should support calling external (lua) functions" do
+      @adapter.should respond_to(:call_ext)
+    end
+    it "should wrap any failed method invocation in an exception" do
+      lambda { @adapter.call_ext("undefined_method", "qq") }.should raise_error(TokyoModel::ExtendedFunctionNotFound)
     end
   end
 end

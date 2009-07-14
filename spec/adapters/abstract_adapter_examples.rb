@@ -48,7 +48,7 @@ shared_examples_for("an adapter that implements AbstractAdapter") do
     it "should package a result list as objects" do
       arr = @adapter.send(:package, @search_results)
       arr.each do |modell|
-        modell.should be_a_kind_of(Modell)
+        modell.should be_a_kind_of(@adapter.plug)
       end
       arr.map { |m| m.primary_key }.sort.should == ["1608", "1609", "1610"]
     end

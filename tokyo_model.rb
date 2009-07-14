@@ -26,4 +26,5 @@ module TokyoModel
   class NotImplementedYet < StandardError; end
   class NoPrimaryKey < StandardError; end
   class ServerNotInPool < StandardError; end
+  class ExtendedFunctionNotFound < StandardError; end
 end

@@ -12,7 +12,7 @@ module TokyoModel
         # some friendly default options
         defaults = {
           :adapter => :ruby_tokyotyrant,
-          :pool => [],
+          :pool => ["127.0.0.1:45000"],
           :filter_fields => nil,
           :use => :db
         }
@@ -55,6 +55,7 @@ module TokyoModel
     
       def pool(*server_specs)
         tokyo_model_options[:pool] = server_specs
+        write_inheritable_attribute :server_pool, TokyoModel::PoolBoy.new(tokyo_model_options[:pool])
       end
     end
     
